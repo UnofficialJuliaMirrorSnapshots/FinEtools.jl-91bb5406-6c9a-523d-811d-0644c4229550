@@ -9,31 +9,32 @@ module FEMMDeforWinklerModule
 
 using FinEtools.FTypesModule: FInt, FFlt, FCplxFlt, FFltVec, FIntVec, FFltMat, FIntMat, FMat, FVec, FDataDict
 import FinEtools.FENodeSetModule: FENodeSet
-import FinEtools.FESetModule: FESet, nodesperelem, manifdim
+import FinEtools.FESetModule: AbstractFESet, nodesperelem, manifdim
 import FinEtools.IntegDomainModule: IntegDomain, integrationdata, Jacobiansurface
 import FinEtools.FieldModule: ndofs, gatherdofnums!
 import FinEtools.NodalFieldModule: NodalField 
-import FinEtools.FEMMBaseModule: FEMMAbstractBase
-import FinEtools.AssemblyModule: SysvecAssemblerBase, SysmatAssemblerBase, SysmatAssemblerSparseSymm, startassembly!, assemble!, makematrix!
+import FinEtools.FEMMBaseModule: AbstractFEMM
+import FinEtools.AssemblyModule: AbstractSysvecAssembler, AbstractSysmatAssembler, SysmatAssemblerSparseSymm, startassembly!, assemble!, makematrix!
 import FinEtools.MatrixUtilityModule: add_nnt_ut_only!, complete_lt!, locjac!
 import FinEtools.SurfaceNormalModule: SurfaceNormal, updatenormal!
 import LinearAlgebra: norm, cross
 
 """
-    FEMMDeforWinkler{S<:FESet, F<:Function}
+    FEMMDeforWinkler{S<:AbstractFESet, F<:Function} <: AbstractFEMM
 
 Type for normal spring support  (Winkler).
 """
-mutable struct FEMMDeforWinkler{S<:FESet, F<:Function} <: FEMMAbstractBase
+mutable struct FEMMDeforWinkler{S<:AbstractFESet, F<:Function} <: AbstractFEMM
     integdomain::IntegDomain{S, F} # geometry data
 end
 
 """
     surfacenormalspringstiffness(self::FEMMDeforWinkler, assembler::A,
         geom::NodalField{FFlt}, u::NodalField{T},
-        springconstant::FFlt, surfacenormal::SurfaceNormal) where {A<:SysmatAssemblerBase, T<:Number}
+        springconstant::FFlt, surfacenormal::SurfaceNormal) where {A<:AbstractSysmatAssembler, T<:Number}
 
 Compute the stiffness matrix of surface normal spring.
+
 Rationale: consider continuously distributed springs between the surface of the
 solid body and the 'ground', in the direction normal to the surface. If the
 spring coefficient becomes large, we have an approximate method of enforcing the
@@ -41,7 +42,7 @@ normal displacement to the surface.gas
 """
 function surfacenormalspringstiffness(self::FEMMDeforWinkler, assembler::A,
     geom::NodalField{FFlt}, u::NodalField{T},
-    springconstant::FFlt, surfacenormal::SurfaceNormal) where {A<:SysmatAssemblerBase, T<:Number}
+    springconstant::FFlt, surfacenormal::SurfaceNormal) where {A<:AbstractSysmatAssembler, T<:Number}
     integdomain = self.integdomain
     # Constants
     nfes = count(integdomain.fes); # number of finite elements in the set
@@ -85,26 +86,5 @@ function surfacenormalspringstiffness(self::FEMMDeforWinkler,
     assembler = SysmatAssemblerSparseSymm();
     return surfacenormalspringstiffness(self, assembler, geom, u, springconstant, surfacenormal);
 end
-
-# """
-#     surfacenormal(loc::FFltMat,J::FFltMat)
-
-# Compute local normal. This makes sense for bounding surfaces only.
-# """
-# function  surfacenormal(loc::FFltMat, J::FFltMat)
-#     norml= zeros(FFlt, length(loc))
-#     # Produce a default normal
-#     if (size(J,1)==3) && (size(J,2)==2)# surface in three dimensions
-#         norml = cross(vec(J[:,1]),vec(J[:,2]));# outer normal to the surface
-#         norml = norml/norm(norml);
-#     elseif (size(J,1)==2)  && (size(J,2)==1)# curve in two dimensions
-#         norml= [J[2,1];-J[1,1]];# outer normal to the contour
-#         norml = norml/norm(norml);
-#     else
-#         error("No definition of normal vector");
-#     end
-#     return reshape(norml,length(norml),1) # return a column vector
-# end
-
 
 end

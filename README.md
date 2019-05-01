@@ -2,14 +2,18 @@
 [![Build Status](https://travis-ci.org/PetrKryslUCSD/FinEtools.jl.svg?branch=master)](https://travis-ci.org/PetrKryslUCSD/FinEtools.jl) [![codecov.io](http://codecov.io/github/PetrKryslUCSD/FinEtools.jl/coverage.svg?branch=master)](http://codecov.io/github/PetrKryslUCSD/FinEtools.jl?branch=master) 
 [![Build status](https://ci.appveyor.com/api/projects/status/0qgyw2aa2529fahy?svg=true)](https://ci.appveyor.com/project/PetrKryslUCSD/finetools-jl)  [![Coverage Status](https://coveralls.io/repos/github/PetrKryslUCSD/FinEtools.jl/badge.svg?branch=master)](https://coveralls.io/github/PetrKryslUCSD/FinEtools.jl?branch=master)
 
+[![][docs-latest-img]][docs-latest-url]
+
+[docs-latest-img]: https://img.shields.io/badge/docs-latest-blue.svg
+[docs-latest-url]: http://petrkryslucsd.github.io/FinEtools.jl/latest/
+
 # FinEtools: Finite Element tools in Julia
 
+![Alt Visualization of acoustic pressure](http://hogwarts.ucsd.edu/~pkrysl/site.images/baffled-piston-a.png "FinEtools.jl")
+
 ## News
-
-- 04/13/2019: Added Reverse Cuthill-McKee renumbering.
-- 03/07/2019: Meshing functions for circles, spherical surfaces, and cylinders added.
-
-
+ 
+- 04/27/2019: The naming and various definitions of abstract types has been unified and streamlined. Because of the ensuing (slight) incompatibilities, the toolkit has been released in the version v2.0.0.
 
 [Past news](oldnews.md)
 
@@ -38,7 +42,8 @@ The package comes with examples  of its use
 [acoustics](https://github.com/PetrKryslUCSD/FinEtoolsAcousticsExamples.git), 
 [mesh generation](https://github.com/PetrKryslUCSD/FinEtoolsMeshGenerationExamples.git)). 
 
-The documentation  is published as [Github pages](https://petrkryslucsd.github.io/FinEtools.jl). 
+The documentation  is published as [Github pages](https://petrkryslucsd.github.io/FinEtools.jl/latest/). 
 A use-case package explaining how to integrate FinEtools with  the user's own code is [available here](https://github.com/PetrKryslUCSD/FinEtoolsUseCase).
 
-![Alt Visualization of sample result](http://hogwarts.ucsd.edu/~pkrysl/site.images/ScreenHunter_31%20Feb.%2009%2020.54.jpg "FinEtools.jl")
+![Alt Visualization of mechanical stress](http://hogwarts.ucsd.edu/~pkrysl/site.images/ScreenHunter_31%20Feb.%2009%2020.54.jpg "FinEtools.jl")
+
