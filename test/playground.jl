@@ -1,30 +1,251 @@
-module mmassembly2
+
+module minfsuptestik1
 using FinEtools
+using FinEtools.FEMMDeforLinearBaseModule: infsup_gh, infsup_sh
 using Test
-import LinearAlgebra: norm, cholesky
+import LinearAlgebra: norm, cholesky, I, eigen
+# using UnicodePlots
 function test()
-	a = SysmatAssemblerSparseSymm(0.0)                                                        
-		startassembly!(a, 5, 5, 3, 7, 7)    
-		m = [0.24406   0.599773    0.833404  0.0420141                                             
-			0.786024  0.00206713  0.995379  0.780298                                              
-			0.845816  0.198459    0.355149  0.224996]                                     
-		assemble!(a, m'*m, [5 2 1 4], [5 2 1 4])        
-		m = [0.146618  0.53471   0.614342    0.737833                                              
-			 0.479719  0.41354   0.00760941  0.836455                                              
-			 0.254868  0.476189  0.460794    0.00919633                                            
-			 0.159064  0.261821  0.317078    0.77646                                               
-			 0.643538  0.429817  0.59788     0.958909]                                   
-		assemble!(a, m'*m, [2 3 1 5], [2 3 1 5])                                        
-		A = makematrix!(a) 
-	@test abs.(maximum([ 2.85928   1.21875    0.891063  0.891614   2.56958   0.0  0.0                          
- 1.21875   1.15515    0.716396  0.0714644  1.56825   0.0  0.0                          
- 0.891063  0.716396   0.936979  0.0        1.36026   0.0  0.0                          
- 0.891614  0.0714644  0.0       0.661253   0.813892  0.0  0.0                          
- 2.56958   1.56825    1.36026   0.813892   4.15934   0.0  0.0                          
- 0.0       0.0        0.0       0.0        0.0       0.0  0.0                          
- 0.0       0.0        0.0       0.0        0.0       0.0  0.0 ]  - A)) < 1.0e-5             
+	lambdatol = sqrt(1e8*eps(1.0));
+	E=1000.0;
+	nu=0.24;
+	parshiftmult= 0.002;
+	A = [1.44 -0.741 -0.53; -0.626 1.589 -0.913; -0.55 0.43 1.756] + 1.0I;
+
+	lambdamin = Float64[]
+	h = Float64[]
+	for ne = [2, 3, 4]
+		Length::FFlt, Width::FFlt, Height::FFlt, nL::FInt, nW::FInt, nH::FInt, orientation::Symbol = (6.0, 6.0, 6.0, ne, ne, ne, :a)
+
+		fens, fes = T4block(Length::FFlt, Width::FFlt, Height::FFlt, nL::FInt, nW::FInt, nH::FInt, orientation::Symbol)
+		fens, fes = T4toT10(fens, fes)
+		# @show connasarray(fes)
+
+		for i = 1:count(fens)
+			fens.xyz[i,:] = fens.xyz[i,:] + vec(reshape(fens.xyz[i,:], 1, 3)*A);
+		end
+		# @show fens.xyz
+	
+		# File =  "minfsuptest1.vtk"
+		# vtkexportmesh(File, fens, fes)
+		# try rm(File); catch end
+
+		MR  =  DeforModelRed3D
+
+		material = MatDeforElastIso(MR, E, nu)
+
+		
+		geom = NodalField(fens.xyz)
+		u = NodalField(zeros(size(fens.xyz,1), 3)) # displacement field
+		bfes = meshboundary(fes)
+		l1 = connectednodes(bfes)
+		setebc!(u, l1, true, 1, 0.0)
+		setebc!(u, l1, true, 2, 0.0)
+		setebc!(u, l1, true, 3, 0.0)
+		numberdofs!(u)
+
+		femm  =  FEMMDeforLinear(MR, IntegDomain(fes, TetRule(1)), material)
+		Gh = infsup_gh(femm, geom, u);
+		femm  =  FEMMDeforLinear(MR, IntegDomain(fes, TetRule(4)), material)
+		Sh = infsup_sh(femm, geom, u);
+		
+		lambda, modes = eigen(Matrix(Gh), Matrix(Sh));
+		
+		# @show lambda
+		abslambda = real.(filter(y -> !isnan(y), lambda));
+		ix = findall(y  -> y < 0.0, abslambda);
+		if !isempty(ix)
+			abslambda[ix] .= 0;
+		end
+
+		abslambda = sqrt.(sort(abslambda));
+		ix = findall(y  -> y > 0.0, abslambda);
+		# a = lineplot(1:length(abslambda[ix]), log.(abslambda[ix]), name = "infsup", xlabel = "eigenvalue", ylabel = "log(eigenvalue)", canvas = DotCanvas)
+		# display(a)
+
+		ix = findall(y  -> y >= lambdatol, abslambda);
+		if isempty(ix)
+			@error "Bad guess of the number of eigenvalues"
+		end
+		push!(lambdamin, abslambda[ix[1]])
+		push!(h, 1.0/(count(fens))^(1/3))
+	end
+
+	@show lambdamin
+	# a = lineplot(log.(h), log.(lambdamin), name = "infsup", xlabel = "log(Element Size)", ylabel = "log(minimum eigenvalue)", canvas = DotCanvas)
+	# display(a)
+	
+	@test norm(lambdamin - [0.0729658, 0.0585958, 0.0459494] ) / norm(lambdamin) <= 1.0e-4
 
 end
 end
-using .mmassembly2
-mmassembly2.test()
+using .minfsuptestik1
+minfsuptestik1.test()
+
+
+module minfsuptestik2
+using FinEtools
+using FinEtools.FEMMDeforLinearBaseModule: infsup_gh, infsup_sh
+using Test
+import LinearAlgebra: norm, cholesky, I, eigen
+using UnicodePlots
+function test()
+	lambdatol = sqrt(1e8*eps(1.0));
+	E=1000.0;
+	nu=0.24;
+	parshiftmult= 0.002;
+	A = [1.44 -0.741 -0.53; -0.626 1.589 -0.913; -0.55 0.43 1.756] + 1.0I;
+
+	lambdamin = Float64[]
+	h = Float64[]
+	for ne = [2, 3, 4]
+		Length::FFlt, Width::FFlt, Height::FFlt, nL::FInt, nW::FInt, nH::FInt, orientation::Symbol = (6.0, 6.0, 6.0, ne, ne, ne, :a)
+
+		fens, fes = T4block(Length::FFlt, Width::FFlt, Height::FFlt, nL::FInt, nW::FInt, nH::FInt, orientation::Symbol)
+		# fens, fes = T4toT10(fens, fes)
+		# @show connasarray(fes)
+
+		for i = 1:count(fens)
+			fens.xyz[i,:] = fens.xyz[i,:] + vec(reshape(fens.xyz[i,:], 1, 3)*A);
+		end
+		# @show fens.xyz
+	
+		# File =  "minfsuptest1.vtk"
+		# vtkexportmesh(File, fens, fes)
+		# try rm(File); catch end
+
+		MR  =  DeforModelRed3D
+
+		material = MatDeforElastIso(MR, E, nu)
+
+		
+		geom = NodalField(fens.xyz)
+		u = NodalField(zeros(size(fens.xyz,1), 3)) # displacement field
+		bfes = meshboundary(fes)
+		l1 = connectednodes(bfes)
+		setebc!(u, l1, true, 1, 0.0)
+		setebc!(u, l1, true, 2, 0.0)
+		setebc!(u, l1, true, 3, 0.0)
+		numberdofs!(u)
+
+		femm  =  FEMMDeforLinear(MR, IntegDomain(fes, TetRule(1)), material)
+		Gh = infsup_gh(femm, geom, u);
+		femm  =  FEMMDeforLinear(MR, IntegDomain(fes, TetRule(1)), material)
+		Sh = infsup_sh(femm, geom, u);
+
+		lambda, modes = eigen(Matrix(Gh), Matrix(Sh));
+
+		# @show lambda
+		abslambda = real.(filter(y -> !isnan(y), lambda));
+		ix = findall(y  -> y < 0.0, abslambda);
+		if !isempty(ix)
+			abslambda[ix] .= 0;
+		end
+
+		abslambda = sqrt.(sort(abslambda));
+		ix = findall(y  -> y > 0.0, abslambda);
+		# a = lineplot(1:length(abslambda[ix]), log.(abslambda[ix]), name = "infsup", xlabel = "eigenvalue", ylabel = "log(eigenvalue)", canvas = DotCanvas)
+		# display(a)
+
+		ix = findall(y  -> y >= lambdatol, abslambda);
+		if isempty(ix)
+			@error "Bad guess of the number of eigenvalues"
+		end
+		push!(lambdamin, abslambda[ix[1]])
+		push!(h, 1.0/(count(fens))^(1/3))
+	end
+
+	# @show lambdamin
+	# a = lineplot(log.(h), log.(lambdamin), name = "infsup", xlabel = "log(Element Size)", ylabel = "log(minimum eigenvalue)", canvas = DotCanvas)
+	# display(a)
+	
+	@test norm(lambdamin - [0.270777, 0.179116, 0.132893]) / norm(lambdamin) <= 1.0e-4
+
+end
+end
+using .minfsuptestik2
+minfsuptestik2.test()
+
+module minfsuptestik3
+using FinEtools
+using FinEtools.FEMMDeforLinearBaseModule: infsup_gh, infsup_sh
+using Test
+import LinearAlgebra: norm, cholesky, I, eigen
+# using UnicodePlots
+function test()
+	lambdatol = sqrt(1e8*eps(1.0));
+	E=1000.0;
+	nu=0.24;
+	parshiftmult= 0.002;
+	A = [1.44 -0.741 -0.53; -0.626 1.589 -0.913; -0.55 0.43 1.756] + 1.0I;
+
+	lambdamin = Float64[]
+	h = Float64[]
+	for ne = [2, 3, 4, 5, 6, 7, 8, 9]
+		Length::FFlt, Width::FFlt, Height::FFlt, nL::FInt, nW::FInt, nH::FInt, orientation::Symbol = (6.0, 6.0, 6.0, ne, ne, ne, :a)
+
+		fens, fes = H8block(Length::FFlt, Width::FFlt, Height::FFlt, nL::FInt, nW::FInt, nH::FInt)
+		# @show connasarray(fes)
+
+		for i = 1:count(fens)
+			fens.xyz[i,:] = fens.xyz[i,:] + vec(reshape(fens.xyz[i,:], 1, 3)*A);
+		end
+		# @show fens.xyz
+	
+		# File =  "minfsuptest1.vtk"
+		# vtkexportmesh(File, fens, fes)
+		# try rm(File); catch end
+
+		MR  =  DeforModelRed3D
+
+		material = MatDeforElastIso(MR, E, nu)
+
+		
+		geom = NodalField(fens.xyz)
+		u = NodalField(zeros(size(fens.xyz,1), 3)) # displacement field
+		bfes = meshboundary(fes)
+		l1 = connectednodes(bfes)
+		setebc!(u, l1, true, 1, 0.0)
+		setebc!(u, l1, true, 2, 0.0)
+		setebc!(u, l1, true, 3, 0.0)
+		numberdofs!(u)
+
+		femm  =  FEMMDeforLinear(MR, IntegDomain(fes, GaussRule(3, 1)), material)
+		Gh = infsup_gh(femm, geom, u);
+		femm  =  FEMMDeforLinear(MR, IntegDomain(fes, GaussRule(3, 1)), material)
+		Sh = infsup_sh(femm, geom, u);
+		
+		lambda, modes = eigen(Matrix(Gh), Matrix(Sh));
+		
+		# @show lambda
+		abslambda = real.(filter(y -> !isnan(y), lambda));
+		ix = findall(y  -> y < 0.0, abslambda);
+		if !isempty(ix)
+			abslambda[ix] .= 0;
+		end
+
+		abslambda = sqrt.(sort(abslambda));
+		ix = findall(y  -> y > 0.0, abslambda);
+		# a = lineplot(1:length(abslambda[ix]), log.(abslambda[ix]), name = "infsup", xlabel = "eigenvalue", ylabel = "log(eigenvalue)", canvas = DotCanvas)
+		# display(a)
+
+		ix = findall(y  -> y >= lambdatol, abslambda);
+		if isempty(ix)
+			@error "Bad guess of the number of eigenvalues"
+		end
+		push!(lambdamin, abslambda[ix[1]])
+		push!(h, 1.0/(count(fens))^(1/3))
+	end
+
+	# @show lambdamin
+	# a = lineplot(log.(h), log.(lambdamin), name = "infsup", xlabel = "log(Element Size)", ylabel = "log(minimum eigenvalue)", canvas = DotCanvas)
+	# display(a)
+	
+	@test norm(lambdamin - [0.447936, 0.317169, 0.305056, 0.300754, 0.291477, 0.290534, 
+0.285866, 0.285624]) / norm(lambdamin) <= 1.0e-4
+
+end
+end
+using .minfsuptestik3
+minfsuptestik3.test()
+
