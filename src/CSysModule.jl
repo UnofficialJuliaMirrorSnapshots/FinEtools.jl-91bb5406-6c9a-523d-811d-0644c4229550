@@ -9,6 +9,8 @@ using FinEtools.FTypesModule: FInt, FFlt, FCplxFlt, FFltVec, FIntVec, FFltMat, F
 import LinearAlgebra: norm, cross
 
 """
+    CSys{F<:Function}
+
 Type for coordinate system transformations.
 """
 struct CSys{F<:Function}
@@ -72,9 +74,11 @@ finite elements.
 - `mdim` = number of manifold dimensions of the finite element in which the
   coordinate system  is being evaluated.
 
-# Warning
+!!! note
+
 If  the coordinate system matrix  should be identity, better use the constructor
 for this specific situation, `CSys(dim::FInt)`. That will be much more efficient.
+
 # See also
 `gen_iso_csmat`
 """
@@ -129,7 +133,7 @@ sdim`, the coordinate system matrix is the identity; otherwise the local
 coordinate directions are aligned with the linear subspace defined by the
 tangent vectors.
 
-# Warning 
+!!! warning 
 
 This *cannot* be reliably used to produce consistent stresses because each
 quadrature point gets a local coordinate system which depends on the
