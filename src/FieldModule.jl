@@ -74,6 +74,9 @@ end
     wipe!(self::AbstractField)
 
 Wipe all the data from the field.
+
+This includes values, prescribed values, degree of freedom numbers, and "is
+fixed" flags. The number of free degrees of freedom is set to zero.
 """
 function wipe!(self::AbstractField)
     Zer = zero(eltype(self.fixed_values[1]))
@@ -229,7 +232,7 @@ function anyfixedvaluenz(self::AbstractField, conn::CC) where {CC}
             if self.is_fixed[conn[i],j] # free degree of freedom
                 if  abs(self.fixed_values[conn[i], j]) > 0.0
                     return true
-                end 
+                end
             end
         end
     end
@@ -516,6 +519,24 @@ function scattersysvec!(self::AbstractField, vec::FVec{T}) where {T<:Number}
 end
 
 """
+    incrscattersysvec!(self::AbstractField, vec::FVec{T}) where {T<:Number}
+
+Increment values of the field by scattering a system vector.
+"""
+function incrscattersysvec!(self::AbstractField, vec::FVec{T}) where {T<:Number}
+    nents,dim = size(self.values);
+    for i = 1:nents
+        for j = 1:dim
+            dn = self.dofnums[i,j];
+            if (dn > 0) && (dn <= self.nfreedofs)
+                self.values[i,j] += vec[dn];
+            end
+        end
+    end
+    return  self
+end
+
+"""
     prescribeddofs(uebc, u)
 
 Find which degrees of freedom are prescribed.
@@ -539,7 +560,7 @@ function prescribeddofs(uebc::AbstractField, u::AbstractField)
 			end
 		end
 	end
-	return dofnums, prescribedvalues 
+	return dofnums, prescribedvalues
 end
 
 end
