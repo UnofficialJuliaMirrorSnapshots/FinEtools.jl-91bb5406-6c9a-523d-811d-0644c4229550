@@ -5,11 +5,11 @@ Module for mesh modification operations.
 """
 module MeshModificationModule
 
-using FinEtools.FTypesModule: FInt, FFlt, FCplxFlt, FFltVec, FIntVec, FFltMat, FIntMat, FMat, FVec, FDataDict
-import FinEtools.FESetModule: AbstractFESet, count, boundaryconn, boundaryfe, updateconn!, connasarray, fromarray!
-import FinEtools.FENodeSetModule: FENodeSet
-import FinEtools.BoxModule: boundingbox, inflatebox!, intersectboxes, inbox
-import FinEtools.MeshSelectionModule: connectednodes
+using ..FTypesModule: FInt, FFlt, FCplxFlt, FFltVec, FIntVec, FFltMat, FIntMat, FMat, FVec, FDataDict
+import ..FESetModule: AbstractFESet, count, boundaryconn, boundaryfe, updateconn!, connasarray, fromarray!
+import ..FENodeSetModule: FENodeSet
+import ..BoxModule: boundingbox, inflatebox!, intersectboxes, inbox
+import ..MeshSelectionModule: connectednodes
 using Base.Sort
 using Base.Order
 import LinearAlgebra: norm, svd, dot, eigen
@@ -680,7 +680,7 @@ be supplied.
 
 For instance: H8 elements require the renumbering function to be supplied as
 ```
-renumb(c) = c[[1, 4, 3, 2, 5, 8, 7, 6]]
+renumb = (c) -> c[[1, 4, 3, 2, 5, 8, 7, 6]]
 ```
 """
 function mirrormesh(fens::FENodeSet, fes::T, Normal::FFltVec,
