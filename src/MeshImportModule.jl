@@ -7,7 +7,7 @@ module MeshImportModule
 
 using ..FTypesModule: FInt, FFlt, FCplxFlt, FFltVec, FIntVec, FFltMat, FIntMat, FMat, FVec, FDataDict
 import ..FENodeSetModule: FENodeSet
-import ..FESetModule: AbstractFESet, FESetT3, FESetT4, FESetT10, FESetH8, FESetH20, setlabel!
+import ..FESetModule: AbstractFESet, FESetT3, FESetQ4, FESetT4, FESetT10, FESetH8, FESetH20, setlabel!
 import ..MeshModificationModule: renumberconn!
 import Unicode: uppercase, isdigit
 import LinearAlgebra: norm
@@ -314,6 +314,8 @@ function import_ABAQUS(filename; allocationchunk=chunk)
                     return FESetT10(elemset1.elem[:, 2:11])
                 elseif (length(TYPE) >= 5) && (TYPE[1:5] == "DC2D3")
                     return FESetT3(elemset1.elem[:, 2:4])
+                elseif (length(TYPE) >= 5) && ((TYPE[1:5] == "CPS4R") || (TYPE[1:4] == "CPS4"))
+                    return FESetQ4(elemset1.elem[:, 2:5])
                 else
                     return nothing
                 end
